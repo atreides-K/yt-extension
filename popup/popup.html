@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=350" />
+  <title>Playlist Intelligence</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <h1>📊 Playlist Intelligence</h1>
+      <p class="tagline">Category-based playlist insights</p>
+    </header>
+
+    <!-- Auth Section -->
+    <section id="auth-section" class="section">
+      <div id="logged-out">
+        <div class="input-group">
+          <label for="input-api-key">YouTube API Key</label>
+          <input
+            type="password"
+            id="input-api-key"
+            placeholder="AIzaSy…"
+          />
+        </div>
+        <div class="input-group">
+          <label for="input-channel-id">Channel ID</label>
+          <input
+            type="text"
+            id="input-channel-id"
+            placeholder="UCxxxxxxxxxxxxxxxxxxxxxx"
+          />
+        </div>
+        <button id="btn-save-config" class="btn btn-primary btn-full">
+          Save & Sync
+        </button>
+      </div>
+
+      <div id="logged-in" class="hidden">
+        <div class="user-info">
+          <span id="user-label">Connected</span>
+          <button id="btn-edit" class="btn btn-small">Edit</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status -->
+    <section id="status-section" class="section hidden">
+      <div class="status-bar">
+        <div class="spinner"></div>
+        <span id="status-text">Syncing playlists…</span>
+      </div>
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+    </section>
+
+    <!-- Quick Stats -->
+    <section id="stats-section" class="section hidden">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-playlists">—</span>
+          <span class="stat-label">Playlists</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-videos">—</span>
+          <span class="stat-label">Videos</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-categories">—</span>
+          <span class="stat-label">Categories</span>
+        </div>
+      </div>
+
+      <div class="top-categories" id="top-categories"></div>
+    </section>
+
+    <!-- Actions -->
+    <section id="actions-section" class="section hidden">
+      <button id="btn-sync" class="btn btn-primary btn-full">
+        🔄 Sync Playlists
+      </button>
+      <button id="btn-dashboard" class="btn btn-secondary btn-full">
+        📈 View Dashboard
+      </button>
+    </section>
+
+    <!-- Last Sync -->
+    <footer id="footer" class="popup-footer hidden">
+      <span id="last-sync">Last sync: never</span>
+    </footer>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

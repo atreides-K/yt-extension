@@ -1,0 +1,57 @@
+/* ─── Playlist Intelligence — Content Script Styles ─── */
+
+.pi-category-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(62, 166, 255, 0.08);
+  border-bottom: 1px solid rgba(62, 166, 255, 0.2);
+  font-size: 12px;
+  color: var(--yt-spec-text-secondary, #aaa);
+  font-family: "Roboto", Arial, sans-serif;
+}
+
+.pi-banner-icon {
+  font-size: 14px;
+}
+
+.pi-banner-text strong {
+  color: var(--yt-spec-text-primary, #fff);
+}
+
+/* Score badges */
+.pi-score-badge {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  pointer-events: auto;
+  cursor: default;
+  z-index: 10;
+}
+
+.pi-score-high {
+  color: #f5c518;
+  /* gold star */
+}
+
+.pi-score-medium {
+  color: #3ea6ff;
+  /* YouTube blue dot */
+  font-size: 10px;
+}
+
+/* Subtle highlight on matched playlists — new YouTube DOM */
+toggleable-list-item-view-model:has(.pi-score-high),
+yt-list-item-view-model:has(.pi-score-high),
+ytd-playlist-add-to-option-renderer:has(.pi-score-high) {
+  background: rgba(245, 197, 24, 0.05) !important;
+}
+
+toggleable-list-item-view-model:has(.pi-score-medium),
+yt-list-item-view-model:has(.pi-score-medium),
+ytd-playlist-add-to-option-renderer:has(.pi-score-medium) {
+  background: rgba(62, 166, 255, 0.03) !important;
+}
