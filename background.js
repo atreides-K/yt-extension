@@ -10,7 +10,7 @@
  * Uses ES module imports for lib/ code.
  */
 
-import { getStoredApiKey, getChannelPlaylists, getPlaylistVideoCategories, getVideoCategory } from "./lib/youtube-api.js";
+import { getStoredApiKey, getChannelPlaylists, getPlaylistVideoCategories, getPlaylistVideoCategoriesDelta, getVideoCategory } from "./lib/youtube-api.js";
 import { computePlaylistStats, computeGlobalStats, getCategoryDistribution } from "./lib/playlist-stats.js";
 import { reorderPlaylists } from "./lib/save-reorder.js";
 
@@ -83,10 +83,16 @@ async function handleSync() {
 
     sendProgress(`Found ${playlists.length} playlists`, 15);
 
-    // Step 2: Fetch video categories per playlist
+    // Load cached categories for delta sync
+    const cached = await chrome.storage.local.get(["playlistCategories"]);
+    const cachedCategories = cached.playlistCategories || {};
+
+    // Step 2: Fetch video categories per playlist (delta-aware)
     const playlistStatsMap = {};
     const playlistMetaMap = {};
     const playlistCategoriesMap = {};
+    let totalApiCalls = 0;     // videos.list calls actually made
+    let totalSkipped = 0;      // videos resolved from cache
 
     for (let i = 0; i < playlists.length; i++) {
       const pl = playlists[i];
@@ -99,14 +105,25 @@ async function handleSync() {
       // Store metadata
       playlistMetaMap[pid] = {
         title,
+        description: pl.snippet.description || "",
+        url: `https://www.youtube.com/playlist?list=${pid}`,
+        thumbnail: pl.snippet.thumbnails?.medium?.url
+          || pl.snippet.thumbnails?.default?.url || "",
+        publishedAt: pl.snippet.publishedAt || null,
         privacyStatus: pl.status?.privacyStatus || pl.snippet?.privacyStatus || "unknown",
         videoCount: pl.contentDetails?.itemCount || 0
       };
 
-      // Fetch categories for all videos in this playlist
+      // Fetch categories — delta: only new videos hit the API
       try {
-        const videoCategories = await getPlaylistVideoCategories(pid, apiKey);
+        const prevCache = cachedCategories[pid] || {};
+        const { videos: videoCategories, apiCalls } = await getPlaylistVideoCategoriesDelta(pid, apiKey, prevCache);
+
         playlistCategoriesMap[pid] = videoCategories;
+        totalApiCalls += apiCalls;
+
+        const cachedCount = Object.keys(videoCategories).length - (apiCalls > 0 ? (apiCalls * 50) : 0);
+        totalSkipped += Math.max(0, Object.keys(prevCache).length);
 
         // Compute stats
         const stats = computePlaylistStats(videoCategories);
@@ -120,6 +137,8 @@ async function handleSync() {
     // Step 3: Compute global stats
     sendProgress("Computing global statistics…", 90);
     const globalStats = computeGlobalStats(playlistStatsMap);
+
+    console.log(`[BG] Delta sync: ${totalApiCalls} videos.list calls (cached videos reused across ${playlists.length} playlists)`);
 
     // Step 4: Persist to chrome.storage.local
     sendProgress("Saving data…", 95);

@@ -206,7 +206,7 @@ function renderTopCategories(distribution, totalVideos) {
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 function openDashboard() {
-  chrome.tabs.create({ url: chrome.runtime.getURL("dashboard/dashboard.html") });
+  chrome.tabs.create({ url: chrome.runtime.getURL("dashboard/index.html") });
 }
 
 // ─── Error ───────────────────────────────────────────────────────────────────
