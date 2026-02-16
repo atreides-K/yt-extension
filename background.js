@@ -10,7 +10,7 @@
  * Uses ES module imports for lib/ code.
  */
 
-import { getStoredApiKey, getChannelPlaylists, getPlaylistVideoCategories, getPlaylistVideoCategoriesDelta, getVideoCategory } from "./lib/youtube-api.js";
+import { getStoredApiKey, getChannelPlaylists, getUserPlaylists, getPlaylistVideoCategories, getPlaylistVideoCategoriesDelta, getVideoCategory, getApiUsage, resetApiUsage, getAuthToken, removeAuthToken } from "./lib/youtube-api.js";
 import { computePlaylistStats, computeGlobalStats, getCategoryDistribution } from "./lib/playlist-stats.js";
 import { reorderPlaylists } from "./lib/save-reorder.js";
 
@@ -37,6 +37,13 @@ async function handleMessage(msg, sender) {
     case "CLEAR_DATA":
       return await handleClearData();
 
+    case "GET_API_USAGE":
+      return { success: true, usage: await getApiUsage() };
+
+    case "RESET_API_USAGE":
+      await resetApiUsage();
+      return { success: true };
+
     default:
       return { success: false, error: `Unknown message type: ${msg.type}` };
   }
@@ -47,35 +54,52 @@ async function handleMessage(msg, sender) {
 async function handleClearData() {
   try {
     await chrome.storage.local.remove([
-      "apiKey", "channelId",
+      "apiKey", "channelId", "oauthClientId",
       "globalStats", "playlistStats", "playlistMeta",
       "playlistCategories", "lastSync"
     ]);
+    // Also clear OAuth token
+    try { await removeAuthToken(); } catch {}
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
   }
 }
-
 // ─── Sync Pipeline ───────────────────────────────────────────────────────────
 
 async function handleSync() {
   try {
-    const config = await chrome.storage.local.get(["apiKey", "channelId"]);
-    const apiKey = config.apiKey;
-    const channelId = config.channelId;
-
-    if (!apiKey) {
-      return { success: false, error: "No API key. Enter your YouTube API key in the popup." };
-    }
-    if (!channelId) {
-      return { success: false, error: "No Channel ID. Enter a Channel ID in the popup." };
-    }
+    const config = await chrome.storage.local.get(["apiKey", "channelId", "oauthClientId"]);
+    const apiKey = config.apiKey || null;
+    const channelId = config.channelId || null;
+    const oauthClientId = config.oauthClientId || null;
 
     // Step 1: Fetch playlists
     sendProgress("Fetching playlists…", 5);
 
-    const playlists = await getChannelPlaylists(channelId, apiKey);
+    let playlists;
+    let oauthToken = null;
+
+    // OAuth path: get token + use mine=true for ALL playlists
+    if (oauthClientId) {
+      try {
+        oauthToken = await getAuthToken(true);
+        if (oauthToken) {
+          playlists = await getUserPlaylists(apiKey, oauthToken);
+          console.log(`[BG] OAuth: fetched ${playlists.length} playlists (incl. private)`);
+        }
+      } catch (oauthErr) {
+        console.warn("[BG] OAuth failed:", oauthErr.message);
+      }
+    }
+
+    // Fallback: API key + channel ID (public only)
+    if (!playlists) {
+      if (!apiKey || !channelId) {
+        return { success: false, error: "Enter an OAuth Client ID, or an API Key + Channel ID." };
+      }
+      playlists = await getChannelPlaylists(channelId, apiKey);
+    }
 
     if (!playlists.length) {
       return { success: false, error: "No playlists found." };
@@ -117,7 +141,7 @@ async function handleSync() {
       // Fetch categories — delta: only new videos hit the API
       try {
         const prevCache = cachedCategories[pid] || {};
-        const { videos: videoCategories, apiCalls } = await getPlaylistVideoCategoriesDelta(pid, apiKey, prevCache);
+        const { videos: videoCategories, apiCalls } = await getPlaylistVideoCategoriesDelta(pid, apiKey, prevCache, oauthToken);
 
         playlistCategoriesMap[pid] = videoCategories;
         totalApiCalls += apiCalls;
@@ -168,13 +192,20 @@ async function handleReorder(videoId) {
     }
 
     // Get the video's category
-    const data = await chrome.storage.local.get(["apiKey"]);
-    const apiKey = data.apiKey;
-    if (!apiKey) {
-      return { success: false, error: "No API key configured." };
+    const data = await chrome.storage.local.get(["apiKey", "oauthClientId"]);
+    const apiKey = data.apiKey || null;
+
+    // Get OAuth token if configured
+    let token = null;
+    if (data.oauthClientId) {
+      try { token = await getAuthToken(false); } catch {}
     }
 
-    const catInfo = await getVideoCategory(videoId, apiKey);
+    if (!apiKey && !token) {
+      return { success: false, error: "No credentials configured." };
+    }
+
+    const catInfo = await getVideoCategory(videoId, apiKey, token);
     if (!catInfo) {
       return { success: false, error: "Could not determine video category" };
     }

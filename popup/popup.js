@@ -19,6 +19,7 @@ const elBtnSaveConfig = $("#btn-save-config");
 const elBtnEdit       = $("#btn-edit");
 const elInputApiKey   = $("#input-api-key");
 const elInputChannel  = $("#input-channel-id");
+const elInputOAuthClientId = $("#input-oauth-client-id");
 
 const elStatusSection = $("#status-section");
 const elStatusText    = $("#status-text");
@@ -37,25 +38,40 @@ const elBtnDashboard  = $("#btn-dashboard");
 const elFooter        = $("#footer");
 const elLastSync      = $("#last-sync");
 
+const elApiUsageSection = $("#api-usage-section");
+const elApiUsageCount   = $("#api-usage-count");
+const elApiUsageBar     = $("#api-usage-bar");
+const elApiUsageWarning = $("#api-usage-warning");
+
 // ─── Init ────────────────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", async () => {
   await checkExistingConfig();
   await loadCachedStats();
+  await loadApiUsage();
   bindEvents();
+
+  // Show the redirect URI so the user can copy it
+  const uriEl = document.getElementById("redirect-uri");
+  if (uriEl && chrome.identity?.getRedirectURL) {
+    uriEl.textContent = chrome.identity.getRedirectURL();
+  }
 });
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 async function checkExistingConfig() {
   try {
-    const result = await chrome.storage.local.get(["apiKey", "channelId"]);
+    const result = await chrome.storage.local.get(["apiKey", "channelId", "oauthClientId"]);
 
     // Always restore input values so they survive popup close/reopen
     if (result.apiKey) elInputApiKey.value = result.apiKey;
     if (result.channelId) elInputChannel.value = result.channelId;
+    if (result.oauthClientId && elInputOAuthClientId) elInputOAuthClientId.value = result.oauthClientId;
 
-    if (result.apiKey && result.channelId) {
+    if (result.oauthClientId) {
+      showConfigured("OAuth (all playlists)");
+    } else if (result.apiKey && result.channelId) {
       showConfigured(`Channel: ${result.channelId}`);
     }
   } catch {
@@ -64,20 +80,23 @@ async function checkExistingConfig() {
 }
 
 async function handleSaveConfig() {
-  const apiKey = elInputApiKey.value.trim();
-  const channelId = elInputChannel.value.trim();
+  const oauthClientId = elInputOAuthClientId?.value.trim() || "";
+  const apiKey = elInputApiKey?.value.trim() || "";
+  const channelId = elInputChannel?.value.trim() || "";
 
-  if (!apiKey) {
-    showError("Please enter your YouTube API key.");
-    return;
-  }
-  if (!channelId) {
-    showError("Please enter a Channel ID.");
+  if (!oauthClientId && !apiKey) {
+    showError("Enter an OAuth Client ID, or an API Key + Channel ID.");
     return;
   }
 
-  await chrome.storage.local.set({ apiKey, channelId });
-  showConfigured(`Channel: ${channelId}`);
+  if (!oauthClientId && !channelId) {
+    showError("Channel ID is required when using API Key (without OAuth).");
+    return;
+  }
+
+  await chrome.storage.local.set({ apiKey, channelId, oauthClientId });
+  const label = oauthClientId ? "OAuth (all playlists)" : `Channel: ${channelId}`;
+  showConfigured(label);
   await triggerSync();
 }
 
@@ -139,6 +158,7 @@ async function triggerSync() {
       }, 1500);
 
       await loadCachedStats();
+      await loadApiUsage();
     } else {
       showError(response.error || "Sync failed");
     }
@@ -202,7 +222,45 @@ function renderTopCategories(distribution, totalVideos) {
 
   elTopCategories.innerHTML = html;
 }
+// ─── API Usage ─────────────────────────────────────────────────────────────────
 
+const API_DAILY_LIMIT = 10000;
+
+async function loadApiUsage() {
+  try {
+    const resp = await chrome.runtime.sendMessage({ type: "GET_API_USAGE" });
+    if (!resp?.success) return;
+
+    const { count, date } = resp.usage;
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Only show today's usage
+    const todayCount = date === today ? count : 0;
+    const pct = Math.min((todayCount / API_DAILY_LIMIT) * 100, 100);
+
+    elApiUsageSection.classList.remove("hidden");
+    elApiUsageCount.textContent = `${todayCount.toLocaleString()} / ${API_DAILY_LIMIT.toLocaleString()}`;
+    elApiUsageBar.style.width = `${pct}%`;
+
+    // Color coding
+    if (pct >= 95) {
+      elApiUsageBar.style.background = "#f44336";
+      elApiUsageWarning.textContent = "⚠️ Limit nearly reached — sync disabled to avoid charges";
+      elApiUsageWarning.classList.remove("hidden");
+      elBtnSync.disabled = true;
+      elBtnSync.style.opacity = "0.5";
+    } else if (pct >= 75) {
+      elApiUsageBar.style.background = "#ff9800";
+      elApiUsageWarning.textContent = "⚠️ High usage — consider waiting until tomorrow";
+      elApiUsageWarning.classList.remove("hidden");
+    } else {
+      elApiUsageBar.style.background = "#4caf50";
+      elApiUsageWarning.classList.add("hidden");
+    }
+  } catch {
+    // Background not available
+  }
+}
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 function openDashboard() {
@@ -235,6 +293,10 @@ function bindEvents() {
   });
   elInputChannel.addEventListener("input", () => {
     chrome.storage.local.set({ channelId: elInputChannel.value.trim() });
+  });
+
+  elInputOAuthClientId?.addEventListener("input", () => {
+    chrome.storage.local.set({ oauthClientId: elInputOAuthClientId.value.trim() });
   });
 }
 

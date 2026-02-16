@@ -159,6 +159,67 @@
     });
   }
 
+  // ─── Search in Modal ──────────────────────────────────────────────
+
+  /**
+   * Inject a search input into the "Save to..." modal.
+   * Works without API key — pure DOM filtering by playlist title.
+   */
+  function injectSearchBar(modal, container) {
+    if (modal.querySelector(".pi-search-bar")) return; // already injected
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "pi-search-bar";
+    input.placeholder = "Search\u2026";
+    input.autocomplete = "off";
+
+    // Find the header element ("Save to...") and place the search next to it
+    const header =
+      modal.querySelector("h2.ytPanelHeaderViewModelTitleHeader") ||
+      modal.querySelector(".ytPanelHeaderViewModelTitle") ||
+      modal.querySelector("h2");
+
+    if (header) {
+      // Wrap header text + input in a flex row
+      const headerParent = header.parentElement;
+      if (headerParent && !headerParent.classList.contains("pi-header-row")) {
+        headerParent.classList.add("pi-header-row");
+      }
+      // Insert input after the header element
+      header.insertAdjacentElement("afterend", input);
+    } else {
+      // Fallback: insert above the list container
+      container.parentElement?.insertBefore(input, container);
+    }
+
+    // Stop keyboard events from bubbling to YouTube's handlers
+    // (prevents modal close on Escape propagation, shortcut triggers, etc.)
+    input.addEventListener("keydown", (e) => e.stopPropagation());
+    input.addEventListener("keypress", (e) => e.stopPropagation());
+    input.addEventListener("keyup", (e) => e.stopPropagation());
+
+    // Filter handler — re-queries items on every keystroke
+    // so lazy-loaded or dynamically added items are always included
+    input.addEventListener("input", () => {
+      const q = input.value.toLowerCase().trim();
+      const { items: liveItems } = findPlaylistItems(modal);
+      for (const item of liveItems) {
+        const title = getItemTitle(item);
+        if (!q || (title && title.toLowerCase().includes(q))) {
+          item.style.setProperty("display", "", "important");
+        } else {
+          item.style.setProperty("display", "none", "important");
+        }
+      }
+    });
+
+    // Auto-focus after a brief tick (let modal settle)
+    requestAnimationFrame(() => {
+      input.focus();
+    });
+  }
+
   // ─── Main Logic ──────────────────────────────────────────────────────
 
   async function handleModalOpen(modal) {
@@ -182,6 +243,9 @@
       }
 
       container.setAttribute(REORDER_ATTR, "true");
+
+      // Always inject search — works without API key
+      injectSearchBar(modal, container);
 
       const videoId = getCurrentVideoId();
       if (!videoId) {
@@ -334,6 +398,12 @@
     document
       .querySelectorAll(".pi-category-banner")
       .forEach((el) => el.remove());
+    document
+      .querySelectorAll(".pi-search-bar")
+      .forEach((el) => el.remove());
+    document
+      .querySelectorAll(".pi-header-row")
+      .forEach((el) => el.classList.remove("pi-header-row"));
     document
       .querySelectorAll(".pi-score-badge")
       .forEach((el) => el.remove());

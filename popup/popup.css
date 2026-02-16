@@ -87,25 +87,69 @@ body {
   margin-bottom: 8px;
 }
 
-/* Divider */
-.divider {
-  display: flex;
-  align-items: center;
-  margin: 12px 0;
-  color: #555;
+/* Google Sign-in — removed, kept .optional-label */
+
+.setup-link {
+  float: right;
+  font-size: 10px;
+  font-weight: 400;
+  color: #3ea6ff;
+  text-decoration: none;
+}
+
+.setup-link:hover {
+  text-decoration: underline;
+}
+
+.setup-steps {
+  font-size: 10px;
+  color: #777;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+.setup-steps code {
+  font-size: 9px;
+  background: #1e1e1e;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #3ea6ff;
+  word-break: break-all;
+  user-select: all;
+}
+
+.alt-config {
+  margin: 8px 0;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.alt-config summary {
+  padding: 8px 12px;
   font-size: 11px;
+  color: #888;
+  cursor: pointer;
+  user-select: none;
 }
 
-.divider::before,
-.divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: #333;
+.alt-config summary:hover {
+  color: #aaa;
 }
 
-.divider span {
-  padding: 0 10px;
+.alt-config[open] summary {
+  border-bottom: 1px solid #333;
+  margin-bottom: 8px;
+}
+
+.alt-config .input-group {
+  padding: 0 12px;
+}
+
+.optional-label {
+  font-weight: 400;
+  color: #666;
+  font-size: 10px;
 }
 
 /* Input groups */
@@ -308,4 +352,53 @@ body {
 #last-sync {
   font-size: 10px;
   color: #555;
+}
+
+/* API Usage */
+.api-usage-card {
+  background: #181818;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.api-usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.api-usage-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.api-usage-count {
+  font-size: 12px;
+  color: #ccc;
+  font-variant-numeric: tabular-nums;
+}
+
+.api-usage-bar-wrap {
+  height: 4px;
+  background: #272727;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.api-usage-bar {
+  height: 100%;
+  background: #4caf50;
+  border-radius: 2px;
+  transition: width 0.4s, background 0.3s;
+  width: 0%;
+}
+
+.api-usage-warning {
+  display: block;
+  font-size: 10px;
+  color: #ff9800;
+  margin-top: 6px;
 }

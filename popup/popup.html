@@ -18,21 +18,42 @@
     <section id="auth-section" class="section">
       <div id="logged-out">
         <div class="input-group">
-          <label for="input-api-key">YouTube API Key</label>
-          <input
-            type="password"
-            id="input-api-key"
-            placeholder="AIzaSy…"
-          />
-        </div>
-        <div class="input-group">
-          <label for="input-channel-id">Channel ID</label>
+          <label for="input-oauth-client-id">
+            OAuth Client ID
+            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="setup-link">Get one ↗</a>
+          </label>
           <input
             type="text"
-            id="input-channel-id"
-            placeholder="UCxxxxxxxxxxxxxxxxxxxxxx"
+            id="input-oauth-client-id"
+            placeholder="123456789-abc.apps.googleusercontent.com"
           />
+          <p class="setup-steps">
+            Console → Create Credentials → OAuth Client ID →
+            <strong>Web application</strong> →
+            Add redirect URI: <code id="redirect-uri"></code>
+          </p>
         </div>
+
+        <details class="alt-config">
+          <summary>Alternative: API Key + Channel ID (public playlists only)</summary>
+          <div class="input-group">
+            <label for="input-api-key">YouTube API Key</label>
+            <input
+              type="password"
+              id="input-api-key"
+              placeholder="AIzaSy…"
+            />
+          </div>
+          <div class="input-group">
+            <label for="input-channel-id">Channel ID</label>
+            <input
+              type="text"
+              id="input-channel-id"
+              placeholder="UCxxxxxxxxxxxxxxxxxxxxxx"
+            />
+          </div>
+        </details>
+
         <button id="btn-save-config" class="btn btn-primary btn-full">
           Save & Sync
         </button>
@@ -85,6 +106,20 @@
       <button id="btn-dashboard" class="btn btn-secondary btn-full">
         📈 View Dashboard
       </button>
+    </section>
+
+    <!-- API Usage -->
+    <section id="api-usage-section" class="section hidden">
+      <div class="api-usage-card">
+        <div class="api-usage-header">
+          <span class="api-usage-label">API Usage Today</span>
+          <span id="api-usage-count" class="api-usage-count">0 / 10,000</span>
+        </div>
+        <div class="api-usage-bar-wrap">
+          <div id="api-usage-bar" class="api-usage-bar"></div>
+        </div>
+        <span id="api-usage-warning" class="api-usage-warning hidden"></span>
+      </div>
     </section>
 
     <!-- Last Sync -->

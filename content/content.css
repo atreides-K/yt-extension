@@ -55,3 +55,42 @@ yt-list-item-view-model:has(.pi-score-medium),
 ytd-playlist-add-to-option-renderer:has(.pi-score-medium) {
   background: rgba(62, 166, 255, 0.03) !important;
 }
+
+/* Kill the inner list scrollbar — let only the outer modal scroll */
+yt-list-view-model[role="list"] {
+  overflow-y: visible !important;
+  max-height: none !important;
+}
+
+/* Header row: title + search side by side */
+.pi-header-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Search bar in save modal header */
+.pi-search-bar {
+  flex: 1 1 auto !important;
+  min-width: 60px !important;
+  max-width: 160px !important;
+  padding: 4px 8px !important;
+  border: 1px solid var(--yt-spec-10-percent-layer, #333) !important;
+  border-radius: 6px !important;
+  background: var(--yt-spec-badge-chip-background, #272727) !important;
+  color: var(--yt-spec-text-primary, #fff) !important;
+  font-family: "Roboto", Arial, sans-serif !important;
+  font-size: 12px !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+
+.pi-search-bar::placeholder {
+  color: var(--yt-spec-text-secondary, #aaa);
+}
+
+.pi-search-bar:focus {
+  border-color: #3ea6ff;
+}
